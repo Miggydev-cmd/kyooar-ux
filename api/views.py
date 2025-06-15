@@ -77,7 +77,8 @@ class AuthViewSet(viewsets.ViewSet):
                 user = serializer.save()
                 refresh = RefreshToken.for_user(user)
                 return Response({
-                    'token': str(refresh.access_token),
+                    'access_token': str(refresh.access_token),
+                    'refresh_token': str(refresh),
                     'user': UserSerializer(user).data,
                     'message': 'Registration successful'
                 }, status=status.HTTP_201_CREATED)
@@ -90,16 +91,25 @@ class AuthViewSet(viewsets.ViewSet):
             
         except IntegrityError as e:
             # Check if the error is due to the unique id_code constraint
+            error_message = 'Registration failed. Please try again.'
             if 'id_code' in str(e):
-                return Response({
-                    'error': 'Registration failed',
-                    'message': 'A user with this QR ID already exists.'
-                }, status=status.HTTP_400_BAD_REQUEST)
+                error_message = 'A user with this QR ID already exists.'
+                return Response({'error': 'Registration failed', 'message': error_message}, status=status.HTTP_400_BAD_REQUEST)
+            elif 'username' in str(e) and ('unique constraint' in str(e).lower() or 'duplicate key' in str(e).lower()):
+                error_message = 'Username already registered.'
+                return Response({'error': 'Registration failed', 'message': error_message}, status=status.HTTP_400_BAD_REQUEST)
+            elif 'full_name' in str(e) and ('unique constraint' in str(e).lower() or 'duplicate key' in str(e).lower()):
+                error_message = 'Full name already registered.'
+                return Response({'error': 'Registration failed', 'message': error_message}, status=status.HTTP_400_BAD_REQUEST)
+            elif 'phone_number' in str(e) and ('unique constraint' in str(e).lower() or 'duplicate key' in str(e).lower()):
+                error_message = 'Phone number already registered.'
+                return Response({'error': 'Registration failed', 'message': error_message}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 # Handle other integrity errors
+                logger.error(f"Unhandled IntegrityError: {e}") # Log unexpected integrity errors
                 return Response({
                     'error': 'Registration failed',
-                    'message': 'Database integrity error: ' + str(e)
+                    'message': 'A database error occurred. Please try again.'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) # Use 500 for unexpected server errors
         except Exception as e:
             return Response({
@@ -122,8 +132,9 @@ class AuthViewSet(viewsets.ViewSet):
 
         refresh = RefreshToken.for_user(user)
         return Response({
-            'token': str(refresh.access_token),
-            'user': UserSerializer(user).data
+            'access_token': str(refresh.access_token),
+            'refresh_token': str(refresh),
+            'user': {**UserSerializer(user).data, 'id': user.id}
         })
 
     @action(detail=False, methods=['post'])
@@ -133,8 +144,9 @@ class AuthViewSet(viewsets.ViewSet):
             user = User.objects.get(id_code=id_code)
             refresh = RefreshToken.for_user(user)
             return Response({
-                'token': str(refresh.access_token),
-                'user': UserSerializer(user).data
+                'access_token': str(refresh.access_token),
+                'refresh_token': str(refresh),
+                'user': {**UserSerializer(user).data, 'id': user.id}
             })
         except User.DoesNotExist:
             return Response({'error': 'Invalid ID code'}, status=status.HTTP_401_UNAUTHORIZED)

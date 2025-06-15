@@ -20,7 +20,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         fields = (
             'username', 'password', 'confirm_password', 'full_name',
             'rank', 'unit', 'id_code', 'phone_number', 'birth_date',
-            'role'
+            'role', 'email'
         )
 
     def validate(self, data):
@@ -45,7 +45,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             })
 
         # Required fields validation
-        required_fields = ['username', 'password', 'full_name', 'rank', 'unit']
+        required_fields = ['username', 'password', 'full_name', 'rank', 'unit', 'email']
         for field in required_fields:
             if not data.get(field):
                 raise serializers.ValidationError({

@@ -2,6 +2,7 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 class User(AbstractUser):
@@ -11,6 +12,7 @@ class User(AbstractUser):
         ('Contractor', 'Contractor'),
     ]
 
+    email = models.EmailField(_("email address"), unique=True)
     full_name = models.CharField(max_length=255)
     rank = models.CharField(max_length=100)
     unit = models.CharField(max_length=100)
